@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tracksling</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="background-orb background-orb-one"></div>
+    <div class="background-orb background-orb-two"></div>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand-block">
+          <p class="eyebrow">Pilotage local</p>
+          <h1>Tracksling</h1>
+          <p class="muted">
+            Organisez vos tableaux, widgets et donnees de suivi dans un projet
+            JSON local.
+          </p>
+        </div>
+
+        <section class="panel compact-panel">
+          <div class="panel-heading">
+            <h2>Projet</h2>
+          </div>
+          <div id="projectSummary" class="stack"></div>
+        </section>
+
+        <section class="panel compact-panel">
+          <div class="panel-heading">
+            <h2>Actions rapides</h2>
+          </div>
+          <div class="button-grid">
+            <button id="newProjectButton" class="secondary-button" type="button">Nouveau</button>
+            <button id="openProjectButton" class="secondary-button" type="button">Ouvrir</button>
+            <button id="saveProjectButton" class="primary-button" type="button">Enregistrer</button>
+            <button id="saveProjectAsButton" class="secondary-button" type="button">Enregistrer sous</button>
+            <button id="openProjectFolderButton" class="secondary-button wide-button" type="button">Montrer le fichier</button>
+          </div>
+        </section>
+
+        <section class="panel compact-panel">
+          <div class="panel-heading">
+            <h2>Creer un tableau</h2>
+          </div>
+          <form id="boardForm" class="stack">
+            <label class="field">
+              <span>Nom</span>
+              <input id="boardNameInput" name="boardName" type="text" maxlength="80" placeholder="Ex. Roadmap capteurs" />
+            </label>
+
+            <label class="field">
+              <span>Description</span>
+              <textarea id="boardDescriptionInput" name="boardDescription" rows="3" placeholder="Objectif du tableau"></textarea>
+            </label>
+
+            <label class="toggle-row" for="customColorsCheckbox">
+              <input id="customColorsCheckbox" type="checkbox" />
+              <span>Utiliser des couleurs personnalisees</span>
+            </label>
+
+            <div class="color-row">
+              <label class="field">
+                <span>Bordure</span>
+                <input id="boardBorderInput" type="color" value="#4f46e5" />
+              </label>
+
+              <label class="field">
+                <span>Fond</span>
+                <input id="boardFillInput" type="color" value="#eef2ff" />
+              </label>
+            </div>
+
+            <button class="primary-button wide-button" type="submit">Ajouter le tableau</button>
+          </form>
+        </section>
+
+        <section class="panel grow-panel">
+          <div class="panel-heading">
+            <h2>Tableaux</h2>
+            <span id="boardCountBadge" class="badge">0</span>
+          </div>
+          <div id="boardList" class="board-list"></div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <section class="panel hero-panel">
+          <div class="hero-copy">
+            <p class="eyebrow">Application Electron locale</p>
+            <h2 id="heroTitle">Chargement...</h2>
+            <p id="heroSubtitle" class="muted"></p>
+          </div>
+
+          <div class="hero-metrics">
+            <article class="metric-card">
+              <span class="metric-label">Machine</span>
+              <strong id="machineNameMetric">-</strong>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">Tableaux</span>
+              <strong id="boardCountMetric">0</strong>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-label">Etat</span>
+              <strong id="saveStateMetric">En memoire</strong>
+            </article>
+          </div>
+        </section>
+
+        <section id="emptyState" class="panel empty-state hidden">
+          <p class="eyebrow">Aucun tableau actif</p>
+          <h3>Le projet est pret.</h3>
+          <p class="muted">
+            Creez un premier tableau depuis le panneau de gauche pour commencer a
+            structurer votre suivi.
+          </p>
+        </section>
+
+        <section id="boardWorkspace" class="board-workspace hidden"></section>
+      </main>
+    </div>
+
+    <div id="toast" class="toast" aria-live="polite"></div>
+
+    <script src="./renderer.js"></script>
+  </body>
+</html>
