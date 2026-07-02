@@ -31,6 +31,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function cacheElements() {
+  elements.landingPage = document.getElementById('landingPage');
+  elements.landingMachineName = document.getElementById('landingMachineName');
+  elements.enterAppButton = document.getElementById('enterAppButton');
+  elements.appShell = document.getElementById('appShell');
   elements.projectSummary = document.getElementById('projectSummary');
   elements.newProjectButton = document.getElementById('newProjectButton');
   elements.openProjectButton = document.getElementById('openProjectButton');
@@ -56,6 +60,10 @@ function cacheElements() {
 }
 
 function bindEvents() {
+  elements.enterAppButton.addEventListener('click', () => {
+    showMainApp();
+  });
+
   elements.newProjectButton.addEventListener('click', async () => {
     await runResultAction(() => api.newProject(), 'Nouveau projet pret.');
   });
@@ -244,6 +252,7 @@ function bindEvents() {
 
 async function bootstrap() {
   if (!api) {
+    elements.landingMachineName.textContent = 'inconnu';
     elements.heroTitle.textContent = 'API Electron indisponible';
     elements.heroSubtitle.textContent = 'Le preload Electron n a pas expose window.tracksling.';
     showToast('window.tracksling est indisponible.', 'error');
@@ -282,6 +291,7 @@ function render() {
   elements.boardCountBadge.textContent = String(boardCount);
   elements.boardCountMetric.textContent = String(boardCount);
   elements.machineNameMetric.textContent = appState.runtimeInfo?.machineName || '-';
+  elements.landingMachineName.textContent = appState.runtimeInfo?.machineName || 'cet appareil';
   elements.saveStateMetric.textContent = hasProjectFile
     ? hasUnsavedChanges
       ? 'Modifications locales'
@@ -306,6 +316,11 @@ function render() {
   } else {
     elements.boardWorkspace.innerHTML = '';
   }
+}
+
+function showMainApp() {
+  elements.landingPage.classList.add('hidden');
+  elements.appShell.classList.remove('hidden');
 }
 
 function renderProjectSummary(boardCount, hasProjectFile, hasUnsavedChanges) {
