@@ -782,3 +782,29 @@ button {
 .hidden {
   display: none !important;
 }
+
+:root {
+  --bg: #f7f3ec;
+  --text: #1e140e;
+  --panel: #fffaf4;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.panel {
+  background: var(--panel);
+}
+
+body[data-theme="dark"] {
+  --bg: #171311;
+  --text: #f6eee6;
+  --panel: #241c18;
+}
+
+#themeToggle{
+  border-radius: 100px;
+}
+

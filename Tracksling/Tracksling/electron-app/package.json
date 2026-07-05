@@ -1,18 +1,31 @@
-{
-  "name": "tracksling-electron",
-  "version": "0.1.0",
-  "description": "Tracksling migrated to Electron + JavaScript",
-  "main": "main.js",
-  "scripts": {
-    "start": "electron .",
-    "dev": "electron ."
-  },
-  "author": "",
-  "license": "UNLICENSED",
-  "devDependencies": {
-    "electron": "^42.3.0"
-  },
-  "dependencies": {
-    "tracksling-electron": "file:"
+ {
+    "name": "tracksling-electron",
+    "version": "0.1.0",
+    "description": "Tracksling migrated to Electron + JavaScript",
+    "main": "main.js",
+    "author": "",
+    "license": "UNLICENSED",
+    "scripts": {
+      "start": "electron .",
+      "dev": "electron .",
+      "dist": "electron-builder",
+      "dist:win": "electron-builder --win"
+    },
+    "devDependencies": {
+      "electron": "^42.3.0",
+      "electron-builder": "^26.15.3"
+    },
+    "build": {
+      "appId": "com.tracksling.app",
+      "productName": "Tracksling",
+      "files": [
+        "main.js",
+        "preload.js",
+        "src/**/*",
+        "package.json"
+      ],
+      "win": {
+        "target": "portable"
+      }
+    }
   }
-}

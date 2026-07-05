@@ -798,3 +798,21 @@ function showToast(message, tone = 'info') {
     elements.toast.classList.remove('visible');
   }, 2800);
 }
+
+const themeToggle = document.getElementById('themeToggle');
+
+function applyTheme(theme) {
+  document.body.setAttribute('data-theme', theme);
+  localStorage.setItem('theme', theme);
+}
+
+function toggleTheme() {
+  const currentTheme = document.body.getAttribute('data-theme') || 'light';
+  const nextTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  applyTheme(nextTheme);
+}
+
+themeToggle.addEventListener('click', toggleTheme);
+
+const savedTheme = localStorage.getItem('theme') || 'light';
+applyTheme(savedTheme);
