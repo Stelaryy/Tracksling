@@ -1,3 +1,11 @@
+/*
+  Tracksling Electron App Stylesheet
+  This file contains the CSS styles for the Tracksling Electron application.
+  It defines the visual appearance of the app, including colors, layout, and typography.
+
+  Authors: Boukra Bettayeb Ahmed
+*/
+
 :root {
   color-scheme: light;
   --bg: #f4efe6;
@@ -34,7 +42,6 @@ body {
     radial-gradient(circle at top left, rgba(255, 205, 130, 0.35), transparent 28%),
     radial-gradient(circle at right 18%, rgba(21, 122, 110, 0.18), transparent 20%),
     linear-gradient(145deg, #f9f3ea 0%, #f0e4d6 48%, #efe8de 100%);
-  overflow: hidden;
 }
 
 button,
@@ -121,6 +128,7 @@ button {
   gap: 24px;
   height: 100vh;
   padding: 24px;
+  overflow: hidden;
 }
 
 .sidebar,
@@ -808,3 +816,129 @@ body[data-theme="dark"] {
   border-radius: 100px;
 }
 
+/* ── PAGE ACCUEIL ─────────────────────────────────────────────── */
+
+  .app-acceuil {
+    position: relative;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: minmax(320px, 1.1fr) minmax(360px, 1fr);
+    gap: 24px;
+    padding: 24px;
+    animation: lift-in 420ms ease;
+  }
+
+  .app-dashboard,
+  .app-dashboardRecently {
+    background: var(--panel);
+    border: 1px solid var(--panel-border);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow);
+    padding: 28px;
+    backdrop-filter: blur(12px);
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .app-dashboard h1,
+  .app-dashboardRecently h2 {
+    margin: 0;
+    font-size: clamp(1.6rem, 3vw, 2.2rem);
+    line-height: 1.05;
+  }
+
+  .app-dashboard .muted {
+    font-size: 0.98rem;
+    line-height: 1.6;
+    max-width: 38rem;
+  }
+
+  /* Grille de boutons dans l'accueil (réutilise .button-grid) */
+  .app-dashboard-actions {
+    margin-top: 8px;
+  }
+
+  /* Liste des tableaux récents */
+  .recent-projects-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+    overflow: auto;
+  }
+
+  .recent-projects-list:empty::after {
+    content: "Aucun tableau récent pour le moment.";
+    display: block;
+    padding: 16px;
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.5);
+    border: 1px dashed rgba(87, 59, 34, 0.14);
+    color: var(--muted);
+    text-align: center;
+    font-size: 0.9rem;
+  }
+
+  .recent-project-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.62);
+    border: 1px solid rgba(87, 59, 34, 0.1);
+    transition: transform 120ms ease, border-color 120ms ease;
+  }
+
+  .recent-project-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(199, 91, 42, 0.3);
+  }
+
+  .recent-project-item strong {
+    display: block;
+    font-size: 0.98rem;
+  }
+
+  .recent-project-item small {
+    color: var(--muted);
+    font-size: 0.82rem;
+  }
+
+  /* ── Responsive pour l'accueil ─────────────────────────────────── */
+
+  @media (max-width: 980px) {
+    .app-acceuil {
+      grid-template-columns: 1fr;
+      height: auto;
+      min-height: 100vh;
+    }
+  }
+
+  @media (max-width: 760px) {
+    .app-acceuil {
+      padding: 16px;
+      gap: 16px;
+    }
+
+    .app-dashboard,
+    .app-dashboardRecently {
+      padding: 20px;
+    }
+  }
+
+    .workspace-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 4px;
+  }
+
+  .workspace-toolbar .secondary-button {
+    padding: 8px 14px;
+    font-size: 0.88rem;
+  }

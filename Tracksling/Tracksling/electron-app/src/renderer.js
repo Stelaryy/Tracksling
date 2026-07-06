@@ -1,3 +1,7 @@
+// Tracksling Electron renderer process
+// This file is loaded in the renderer process and has access to the DOM and the preload API
+//authors: Boukra Bettayeb Ahmed
+
 const api = window.tracksling;
 
 const appState = {
@@ -22,19 +26,66 @@ const elements = {};
 
 let toastTimer = null;
 
+window.addEventListener('error', (event) => {
+  const details = [event.message, event.filename, event.lineno].filter(Boolean).join(' | ');
+  renderFatalError(details || 'Erreur JavaScript inconnue');
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const reason = event.reason?.message || String(event.reason || 'Promesse rejetee');
+  renderFatalError(reason);
+});
+
+// Initialisation : afficher la landing, cacher le reste
+document.querySelectorAll('[data-page]').forEach(el => {
+  el.classList.toggle('hidden', el.dataset.page !== 'landing');
+});
+
 document.addEventListener('DOMContentLoaded', () => {
   cacheElements();
+  showPage('landing');
   bindEvents();
   bootstrap().catch((error) => {
     showToast(error?.message || 'Impossible de charger Tracksling.', 'error');
   });
 });
 
+// Renvoie le tableau choisi, ou null si l'utilisateur annule
+  function pickBoardFromUser(promptMessage) {
+    const boards = appState.project.boards;
+    if (!boards.length) {
+      showToast('Aucun tableau disponible.', 'error');
+      return null;
+    }
+
+    // Cas simple : 1 seul tableau, on le prend direct
+    if (boards.length === 1) {
+      return boards[0];
+    }
+
+    // Sinon : prompt() numéroté — natif, zéro dépendance
+    const menu = boards
+      .map((b, i) => `${i + 1}) ${b.name}`)
+      .join('\n');
+    const answer = window.prompt(`${promptMessage}\n\n${menu}\n\nTapez le numero :`);
+    if (answer === null) return null; // annulé
+
+    const index = Number.parseInt(answer.trim(), 10) - 1;
+    if (Number.isNaN(index) || index < 0 || index >= boards.length) {
+      showToast('Selection invalide.', 'error');
+      return null;
+    }
+    return boards[index];
+  }
+
+
 function cacheElements() {
   elements.landingPage = document.getElementById('landingPage');
   elements.landingMachineName = document.getElementById('landingMachineName');
   elements.enterAppButton = document.getElementById('enterAppButton');
   elements.appShell = document.getElementById('appShell');
+  elements.dashboardMachineName = document.querySelector('.app-dashboardMachineName');
+  elements.recentProjectsList = document.getElementById('recentProjectsList');
   elements.projectSummary = document.getElementById('projectSummary');
   elements.newProjectButton = document.getElementById('newProjectButton');
   elements.openProjectButton = document.getElementById('openProjectButton');
@@ -57,33 +108,78 @@ function cacheElements() {
   elements.emptyState = document.getElementById('emptyState');
   elements.boardWorkspace = document.getElementById('boardWorkspace');
   elements.toast = document.getElementById('toast');
+  elements.editProjectButton  = document.getElementById('editProjectButton');
+  elements.deleteProjectButton = document.getElementById('deleteProjectButton');
+  elements.themeToggle = document.getElementById('themeToggle');
+
+  const savedTheme = localStorage.getItem('theme') || 'light';
+  applyTheme(savedTheme);
 }
 
 function bindEvents() {
+  // ── Landing → Accueil ─────────────────────────────────────
   elements.enterAppButton.addEventListener('click', () => {
-    showMainApp();
+    showPage('accueil');
   });
 
+  // ── Thème ─────────────────────────────────────────────────
+  elements.themeToggle.addEventListener('click', toggleTheme);
+
+  // ── Accueil → App : Nouveau projet ────────────────────────
   elements.newProjectButton.addEventListener('click', async () => {
-    await runResultAction(() => api.newProject(), 'Nouveau projet pret.');
+    await runResultAction(() => api.newProject(), 'Nouveau projet prêt.');
+    showPage('app');
   });
 
+  // ── Accueil → App : Ouvrir projet existant ────────────────
   elements.openProjectButton.addEventListener('click', async () => {
-    await runResultAction(() => api.openProject(), 'Projet ouvert.');
+    const result = await api.openProject();
+    if (result?.canceled) return;
+    await syncResultState(result);
+    showPage('app');
   });
 
-  elements.saveProjectButton.addEventListener('click', async () => {
-    await runResultAction(() => api.saveProject(), 'Projet enregistre.');
+  // ── Accueil : Modifier un tableau ────────────────────────
+  elements.editProjectButton.addEventListener('click', async () => {
+    const board = pickBoardFromUser('Quel tableau voulez-vous modifier ?');
+    if (!board) return;
+    await runStateAction(() => api.setActiveBoard(board.id));
+    showPage('app');
   });
 
-  elements.saveProjectAsButton.addEventListener('click', async () => {
-    await runResultAction(() => api.saveProjectAs(), 'Projet enregistre sous un nouveau fichier.');
+  // ── Accueil : Supprimer un tableau ───────────────────────
+  elements.deleteProjectButton.addEventListener('click', async () => {
+    const board = pickBoardFromUser('Quel tableau voulez-vous supprimer ?');
+    if (!board) return;
+
+    const confirmed = window.confirm(
+      `Supprimer definitivement le tableau « ${board.name} » ?`
+    );
+    if (!confirmed) return;
+
+    await runStateAction(() => api.deleteBoard(board.id), 'Tableau supprime.');
   });
 
-  elements.openProjectFolderButton.addEventListener('click', async () => {
-    await runResultAction(() => api.openProjectFolder(), 'Dossier du projet ouvert.');
+  // ── App → retour Accueil ──────────────────────────────────
+  document.getElementById('BackButton')?.addEventListener('click', () => {
+    showPage('accueil');
   });
 
+  // ── Sauvegarde : en attente (vivent sur une autre page) ───
+  // Le ?. fait que ces lignes ne plantent pas si les boutons sont absents du DOM
+  elements.saveProjectButton?.addEventListener('click', async () => {
+    await runResultAction(() => api.saveProject(), 'Projet enregistré.');
+  });
+
+  elements.saveProjectAsButton?.addEventListener('click', async () => {
+    await runResultAction(() => api.saveProjectAs(), 'Projet enregistré sous.');
+  });
+
+  elements.openProjectFolderButton?.addEventListener('click', async () => {
+    await runResultAction(() => api.openProjectFolder(), 'Dossier ouvert.');
+  });
+
+  // ── Formulaire : créer un tableau (reste sur l'app) ───────
   elements.boardForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     const name = elements.boardNameInput.value.trim();
@@ -94,7 +190,7 @@ function bindEvents() {
 
     await runStateAction(
       () => api.createBoard(name, description, useCustomColors, borderColor, fillColor),
-      'Tableau ajoute.'
+      'Tableau ajouté.'
     );
 
     elements.boardForm.reset();
@@ -283,47 +379,131 @@ function normalizeProject(project) {
 }
 
 function render() {
-  const activeBoard = getActiveBoard();
-  const boardCount = appState.project.boards.length;
-  const hasProjectFile = !!appState.projectInfo?.hasProjectFile;
-  const hasUnsavedChanges = !!appState.projectInfo?.hasUnsavedChanges;
+    const activeBoard = getActiveBoard();
+    const boardCount = appState.project.boards.length;
+    const hasProjectFile = !!appState.projectInfo?.hasProjectFile;
+    const hasUnsavedChanges = !!appState.projectInfo?.hasUnsavedChanges;
+    const machineName = appState.runtimeInfo?.machineName || '-';
 
-  elements.boardCountBadge.textContent = String(boardCount);
-  elements.boardCountMetric.textContent = String(boardCount);
-  elements.machineNameMetric.textContent = appState.runtimeInfo?.machineName || '-';
-  elements.landingMachineName.textContent = appState.runtimeInfo?.machineName || 'cet appareil';
-  elements.saveStateMetric.textContent = hasProjectFile
-    ? hasUnsavedChanges
-      ? 'Modifications locales'
-      : 'Synchronise'
-    : 'En memoire';
+    // ── Éléments présents sur PLUSIEURS pages (accueil + app) ──
+    if (elements.landingMachineName) {
+      elements.landingMachineName.textContent = machineName;
+    }
+    if (elements.dashboardMachineName) {
+      elements.dashboardMachineName.textContent = machineName;
+    }
+    if (elements.boardCountMetric) {
+      elements.boardCountMetric.textContent = String(boardCount);
+    }
+    if (elements.saveStateMetric) {
+      elements.saveStateMetric.textContent = hasProjectFile
+        ? hasUnsavedChanges ? 'Modifications locales' : 'Synchronise'
+        : 'En memoire';
+    }
 
-  elements.heroTitle.textContent = activeBoard ? activeBoard.name : 'Aucun tableau actif';
-  elements.heroSubtitle.textContent = hasProjectFile
-    ? `Projet local: ${appState.projectInfo.projectFilePath}`
-    : 'Le projet courant existe seulement en memoire tant que vous ne l enregistrez pas.';
+    // ── Boutons d'action accueil (Modifier/Supprimer) ──
+    const hasBoards = boardCount > 0;
+    if (elements.editProjectButton) {
+      elements.editProjectButton.disabled = !hasBoards;
+    }
+    if (elements.deleteProjectButton) {
+      elements.deleteProjectButton.disabled = !hasBoards;
+    }
 
-  elements.openProjectFolderButton.disabled = !hasProjectFile;
+    // ── Si on n'est pas sur la page app, on s'arrête là ──
+    const appPage = elements.appShell;
+    if (!appPage || appPage.classList.contains('hidden')) {
+      return;
+    }
 
-  renderProjectSummary(boardCount, hasProjectFile, hasUnsavedChanges);
-  renderBoardList(activeBoard);
+    // ── Tout ce qui suit est spécifique à la page app ──
+    if (elements.boardCountBadge) {
+      elements.boardCountBadge.textContent = String(boardCount);
+    }
+    if (elements.heroTitle) {
+      elements.heroTitle.textContent = activeBoard ? activeBoard.name : 'Aucun tableau actif';
+    }
+    if (elements.heroSubtitle) {
+      elements.heroSubtitle.textContent = hasProjectFile
+        ? `Projet local: ${appState.projectInfo.projectFilePath}`
+        : 'Le projet courant existe seulement en memoire tant que vous ne l enregistrez pas.';
+    }
+    if (elements.openProjectFolderButton) {
+      elements.openProjectFolderButton.disabled = !hasProjectFile;
+    }
+    if (elements.projectSummary) {
+      renderProjectSummary(boardCount, hasProjectFile, hasUnsavedChanges);
+    }
+    if (elements.boardList) {
+      renderBoardList(activeBoard);
+    }
+    if (elements.emptyState) {
+      elements.emptyState.classList.toggle('hidden', !!activeBoard);
+    }
+    if (elements.boardWorkspace) {
+      elements.boardWorkspace.classList.toggle('hidden', !activeBoard);
+      if (activeBoard) {
+        renderBoardWorkspace(activeBoard);
+      } else {
+        elements.boardWorkspace.innerHTML = '';
+      }
+    }
+  }
 
-  elements.emptyState.classList.toggle('hidden', !!activeBoard);
-  elements.boardWorkspace.classList.toggle('hidden', !activeBoard);
+function showPage(name) {
+  document.querySelectorAll('[data-page]').forEach((el) => {
+    el.classList.toggle('hidden', el.dataset.page !== name);
+  });
 
-  if (activeBoard) {
-    renderBoardWorkspace(activeBoard);
-  } else {
-    elements.boardWorkspace.innerHTML = '';
+  const target = document.querySelector(`[data-page="${name}"]`);
+  if (!target) {
+    console.warn(`Page "${name}" introuvable`);
+    return;
+  }
+
+  onPageEnter(name);
+}
+
+function onPageEnter(name) {
+  if (name === 'accueil') {
+    loadRecentProjects();
+    return;
+  }
+
+  if (name === 'app') {
+    render();
   }
 }
 
-function showMainApp() {
-  elements.landingPage.classList.add('hidden');
-  elements.appShell.classList.remove('hidden');
+function loadRecentProjects() {
+  if (!elements.recentProjectsList) {
+    return;
+  }
+
+  const boards = appState.project?.boards || [];
+  if (!boards.length) {
+    elements.recentProjectsList.innerHTML = '<p class="muted">Aucun tableau recent.</p>';
+    return;
+  }
+
+  elements.recentProjectsList.innerHTML = boards
+    .slice(0, 3)
+    .map((board) => `
+      <article class="board-card">
+        <div>
+          <strong>${escapeHtml(board.name)}</strong>
+          <small>${escapeHtml(board.description || 'Sans description')}</small>
+        </div>
+      </article>
+    `)
+    .join('');
 }
 
 function renderProjectSummary(boardCount, hasProjectFile, hasUnsavedChanges) {
+  if (!elements.projectSummary) {
+    return;
+  }
+
   const stateLabel = hasProjectFile
     ? hasUnsavedChanges
       ? 'Modifications non enregistrees'
@@ -750,6 +930,20 @@ async function runResultAction(action, successMessage) {
   }
 }
 
+async function syncResultState(result) {
+  if (result?.state) {
+    appState.project = normalizeProject(result.state);
+  }
+
+  if (result?.projectInfo) {
+    appState.projectInfo = result.projectInfo;
+  } else {
+    appState.projectInfo = await api.getProjectInfo();
+  }
+
+  render();
+}
+
 function buildSparklinePoints(values) {
   const safeValues = values.map((value) => Number(value) || 0);
   const minValue = Math.min(...safeValues);
@@ -814,5 +1008,28 @@ function toggleTheme() {
 
 themeToggle.addEventListener('click', toggleTheme);
 
-const savedTheme = localStorage.getItem('theme') || 'light';
-applyTheme(savedTheme);
+function renderFatalError(message) {
+    if (!document.body) return;
+
+    const existing = document.getElementById('fatalRendererError');
+    if (existing) {
+      existing.querySelector('pre').textContent = message;
+      return;
+    }
+
+    const panel = document.createElement('section');
+    panel.id = 'fatalRendererError';
+    panel.style.position = 'fixed';
+    panel.style.left = '24px';
+    panel.style.right = '24px';
+    panel.style.bottom = '24px';
+    panel.style.zIndex = '9999';
+    panel.style.padding = '16px';
+    panel.style.borderRadius = '16px';
+    panel.style.background = 'rgba(130, 33, 33, 0.96)';
+    panel.style.color = '#fff';
+    panel.style.boxShadow = '0 18px 40px rgba(33, 22, 15, 0.3)';
+    panel.innerHTML = '<strong>Erreur renderer</strong><pre style="margin:8px 0 0;white-space:pre-wrap;font-family:Consolas,monospace"></pre>';
+    panel.querySelector('pre').textContent = message;
+    document.body.appendChild(panel);
+  }

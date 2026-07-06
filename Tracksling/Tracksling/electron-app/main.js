@@ -527,6 +527,11 @@ function createWindow() {
     }
   });
 
+  window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+    console.log(`[renderer:${level}] ${sourceId}:${line} ${message}`);
+  });
+
+  window.webContents.openDevTools({ mode: 'detach' });
   window.loadFile(path.join(__dirname, 'src', 'index.html'));
 }
 
